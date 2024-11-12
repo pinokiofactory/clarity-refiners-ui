@@ -11,7 +11,7 @@ module.exports = {
       start: info.running("start.js"),
       update: info.running("update.js"),
       reset: info.running("reset.js"),
-	  cache: info.running("delete-cache.js"),
+	  cache: info.running("delete-cache.js")
     }
     if (running.install) {
       return [{
@@ -55,6 +55,7 @@ module.exports = {
           icon: 'fa-solid fa-terminal',
           text: "Resetting",
           href: "reset.js",
+		}]
 	  } else if (running.cache) {
         return [{
           default: true,
