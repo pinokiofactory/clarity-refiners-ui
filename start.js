@@ -6,6 +6,7 @@ module.exports = {
       params: {
         venv: "env",                // Edit this to customize the venv folder path
         env: { },                   // Edit this to customize environment variables (see documentation)
+        path: "app",
         message: [
           "python app.py",    // Edit with your custom commands
         ],

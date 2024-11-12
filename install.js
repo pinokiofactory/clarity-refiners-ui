@@ -6,13 +6,15 @@ module.exports = {
         uri: "torch.js",
         params: {
           venv: "env",
+          path: "app"
         }
       }
     },
     {
       method: "shell.run",
       params: {
-        venv: "env", 
+        venv: "env",
+        path: "app",
         message: [
           "pip install gradio devicetorch",
           "pip install -r requirements.txt"
