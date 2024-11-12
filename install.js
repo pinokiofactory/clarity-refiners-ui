@@ -5,7 +5,7 @@ module.exports = {
       method: "shell.run",
       params: {
         message: [
-          "git clone https://github.com/ai-anchorite/Finegrain-Image-Enhancer.git app",
+          "git clone https://github.com/ai-anchorite/Finegrain-Image-Enhancer-Pinokio.git app",
         ]
       }
     },
