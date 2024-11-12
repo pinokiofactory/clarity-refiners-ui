@@ -1,0 +1,15 @@
+git+https://github.com/finegrain-ai/refiners@a5d3c2971b84f6faa4762b1cf5a07f4f812bb1f5
+gradio_imageslider==0.0.20
+numpy<2.0.0
+pillow>=10.4.0
+pillow-heif>=0.18.0
+gradio==4.44.0
+
+# for Florence-2
+transformers
+ftfy
+regex
+tqdm 
+accelerate 
+einops
+timm

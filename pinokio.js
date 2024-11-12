@@ -10,7 +10,8 @@ module.exports = {
       install: info.running("install.js"),
       start: info.running("start.js"),
       update: info.running("update.js"),
-      reset: info.running("reset.js")
+      reset: info.running("reset.js"),
+	  cache: info.running("delete-cache.js"),
     }
     if (running.install) {
       return [{
@@ -54,6 +55,12 @@ module.exports = {
           icon: 'fa-solid fa-terminal',
           text: "Resetting",
           href: "reset.js",
+	  } else if (running.cache) {
+        return [{
+          default: true,
+          icon: 'fa-solid fa-terminal',
+          text: "Clearing Cache",
+          href: "delete-cache.js",
         }]
       } else {
         return [{
@@ -73,6 +80,11 @@ module.exports = {
           icon: "fa-regular fa-circle-xmark",
           text: "Reset",
           href: "reset.js",
+		  confirm: "Are you sure you wish to reset this app?",
+	    }, {
+          icon: "fa-regular fa-circle-xmark",
+          text: "Delete Gradio Image Cache",
+          href: "delete-cache.js",
         }]
       }
     } else {

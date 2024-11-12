@@ -1,3 +1,12 @@
-# Finegrain-Image-Enhancer
+title: Finegrain Image Enhancer
 
-A pinokio script for https://github.com/ai-anchorite/Finegrain-Image-Enhancer.git
+# Finegrain Image Enhancer
+
+A enhanced Pinokio port of: https://huggingface.co/spaces/finegrain/finegrain-image-enhancer
+
+## Links
+
+- https://blog.finegrain.ai/posts/reproducing-clarity-upscaler/
+- https://github.com/finegrain-ai/refiners
+- https://github.com/philz1337x/clarity-upscaler
+- https://finegrain.ai/
