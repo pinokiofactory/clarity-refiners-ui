@@ -2,7 +2,22 @@
 
 A enhanced Pinokio port of: https://huggingface.co/spaces/finegrain/finegrain-image-enhancer
 
-![2024-11-13 15-53-11](https://github.com/user-attachments/assets/77662308-9b87-411a-a940-8848b3f89006)
+<img src="https://github.com/user-attachments/assets/77662308-9b87-411a-a940-8848b3f89006" width="600" alt="Finegrain Image Enhancer Interface">
+
+## Features
+
+- Integrated Florence-2 for easy prompt crafting
+- GPU/CPU usage tracking and detailed console output for process transparency
+- Pinokio friendly save functions:
+  - Autosave option
+  - Manual save button
+  - Quick access to output folder
+- **Image Enhancement**:
+  - Up to 4x creative upscaling
+  - Fine-grained control over enhancement parameters
+  - Seed management for reproducible results
+- **Optimized for 8GB VRAM**
+  - All features fit into 8GB VRAM :) 
 
 ## Links
 
