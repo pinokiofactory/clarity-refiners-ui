@@ -19,6 +19,12 @@ A enhanced Pinokio port of: https://huggingface.co/spaces/finegrain/finegrain-im
 - **Optimized for 8GB VRAM**
   - All features fit into 8GB VRAM :) 
 
+##Before -> After
+
+![2024-11-13 17-51-41](https://github.com/user-attachments/assets/dcc24f69-aa56-41f0-ac29-27357d9ceeb4)
+
+
+
 ## Links
 
 - https://blog.finegrain.ai/posts/reproducing-clarity-upscaler/
