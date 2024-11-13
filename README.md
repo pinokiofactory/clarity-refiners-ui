@@ -6,16 +6,16 @@ A enhanced Pinokio port of: https://huggingface.co/spaces/finegrain/finegrain-im
 
 ## Features
 
+- **Image Enhancement**:
+  - Up to 4x creative upscaling
+  - Fine-grained control over enhancement parameters
+  - Seed management for reproducible results
 - Integrated Florence-2 for easy prompt crafting
 - GPU/CPU usage tracking and detailed console output for process transparency
 - Pinokio friendly save functions:
   - Autosave option
   - Manual save button
   - Quick access to output folder
-- **Image Enhancement**:
-  - Up to 4x creative upscaling
-  - Fine-grained control over enhancement parameters
-  - Seed management for reproducible results
 - **Optimized for 8GB VRAM**
   - All features fit into 8GB VRAM :) 
 
