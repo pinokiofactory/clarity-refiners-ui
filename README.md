@@ -36,4 +36,4 @@ Which was adapted from philz1337x's Clarity-Upscaler: https://github.com/philz13
 - https://github.com/finegrain-ai/refiners
 - https://github.com/philz1337x/clarity-upscaler
 - https://finegrain.ai/
-- https://huggingface.co/microsoft/Florence-2-large
+- https://huggingface.co/multimodalart/Florence-2-large-no-flash-attn
