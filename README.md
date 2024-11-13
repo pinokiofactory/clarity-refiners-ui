@@ -1,6 +1,6 @@
 # Finegrain Image Enhancer
 
-A enhanced Pinokio port of: https://huggingface.co/spaces/finegrain/finegrain-image-enhancer
+An enhanced Pinokio port of: https://huggingface.co/spaces/finegrain/finegrain-image-enhancer
 
 Which was adapted from philz1337x's Clarity-Upscaler: https://github.com/philz1337x/clarity-upscaler
 
