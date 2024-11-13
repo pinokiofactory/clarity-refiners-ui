@@ -25,3 +25,4 @@ A enhanced Pinokio port of: https://huggingface.co/spaces/finegrain/finegrain-im
 - https://github.com/finegrain-ai/refiners
 - https://github.com/philz1337x/clarity-upscaler
 - https://finegrain.ai/
+- https://huggingface.co/microsoft/Florence-2-large
