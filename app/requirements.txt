@@ -4,7 +4,7 @@ numpy<2.0.0
 pillow>=10.4.0
 pillow-heif>=0.18.0
 gradio==4.44.0
-
+devicetorch
 # for Florence-2
 transformers
 ftfy
