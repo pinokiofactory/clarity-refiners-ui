@@ -268,6 +268,11 @@ def process(
     auto_save_enabled: bool = True,  
 ) -> tuple[Image.Image, Image.Image]:
     try:
+        # Input validation
+        if input_image is None:
+            message_manager.add_warning("No image loaded for enhancement")
+            return gr.Warning("Please load an image first!")
+            
         actual_seed = get_seed(seed, reuse_seed)
         message_manager.add_message(f"Starting enhancement with seed {actual_seed}")
         message_manager.add_message(f"Upscale factor: {upscale_factor}x")
