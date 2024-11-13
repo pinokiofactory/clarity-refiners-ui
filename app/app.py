@@ -7,6 +7,7 @@ import devicetorch
 import subprocess
 import gc
 import psutil  # for system stats - gpu/cpu etc
+import random
 
 from PIL import Image
 from pathlib import Path
@@ -33,6 +34,7 @@ pillow_heif.register_heif_opener()
 pillow_heif.register_avif_opener()
 
 message_manager = MessageManager()
+last_seed = None
 save_path = "../outputs"   # Can be changed to a preferred directory: "C:\path\to\save_folder"
 
 
@@ -252,7 +254,8 @@ def process(
     input_image: Image.Image,
     prompt: str = "masterpiece, best quality, highres",
     negative_prompt: str = "worst quality, low quality, normal quality",
-    seed: int = 42,
+    seed: int = -1,
+    reuse_seed: bool = False,
     upscale_factor: int = 2,
     controlnet_scale: float = 0.6,
     controlnet_decay: float = 1.0,
@@ -265,15 +268,16 @@ def process(
     auto_save_enabled: bool = True,  
 ) -> tuple[Image.Image, Image.Image]:
     try:
-        message_manager.add_message(f"Starting enhancement with seed {seed}")
+        actual_seed = get_seed(seed, reuse_seed)
+        message_manager.add_message(f"Starting enhancement with seed {actual_seed}")
         message_manager.add_message(f"Upscale factor: {upscale_factor}x")
         
         # Clear memory before processing
         gc.collect()
         devicetorch.empty_cache(torch)
         message_manager.add_message("Cleared GPU memory")
-        
-        manual_seed(seed)
+
+        manual_seed(actual_seed)
         solver_type: type[Solver] = getattr(solvers, solver)
 
         # Use no_grad context
@@ -364,6 +368,21 @@ def save_output(image: Image.Image = None, auto_saved: bool = False) -> None:  #
         message_manager.add_error(error_msg)
 
 
+def get_seed(seed_value: int, reuse: bool) -> int:
+    """Handle seed generation and reuse logic."""
+    global last_seed
+    
+    if reuse and last_seed is not None:
+        return last_seed
+    
+    if seed_value == -1:
+        generated_seed = random.randint(0, 10_000)
+        last_seed = generated_seed
+        return generated_seed
+    
+    last_seed = seed_value
+    return seed_value
+        
         
 css = """
 
@@ -454,8 +473,18 @@ with gr.Blocks(css=css) as demo:
                 label="Negative Prompt",
                 placeholder="worst quality, low quality, normal quality",
             )
-            seed = gr.Slider( minimum=1, maximum=10_000, value=42, step=1, label="Seed")
-        
+        with gr.Row():
+            with gr.Column(scale=8):
+                seed = gr.Slider(
+                    minimum=-1,
+                    maximum=10_000,
+                    step=1,
+                    value=-1,
+                    label="Seed (-1 for random)"
+                )
+            with gr.Column(scale=1):
+                reuse_seed = gr.Checkbox(label="Reuse previous seed", value=False)
+                
     with gr.Accordion("Options", open=False):
         with gr.Row():    
             upscale_factor = gr.Slider(
@@ -556,6 +585,7 @@ with gr.Blocks(css=css) as demo:
             prompt,
             negative_prompt,
             seed,
+            reuse_seed, 
             upscale_factor,
             controlnet_scale,
             controlnet_decay,
