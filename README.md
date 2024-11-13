@@ -2,7 +2,12 @@
 
 A enhanced Pinokio port of: https://huggingface.co/spaces/finegrain/finegrain-image-enhancer
 
+Which was adapted from philz1337x's Clarity-Upscaler: https://github.com/philz1337x/clarity-upscaler
+
+## Pinokio UI:
 <img src="https://github.com/user-attachments/assets/77662308-9b87-411a-a940-8848b3f89006" width="600" alt="Finegrain Image Enhancer Interface">
+
+
 
 ## Features
 
