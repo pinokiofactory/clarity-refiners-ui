@@ -102,7 +102,7 @@ CHECKPOINTS = ESRGANUpscalerCheckpoints(
 )
 
 device = torch.device(devicetorch.get(torch))
-dtype = devicetorch.dtype(torch) 
+dtype = devicetorch.dtype(torch, "bfloat16")
 enhancer = ESRGANUpscaler(checkpoints=CHECKPOINTS, device=device, dtype=dtype)
 
 
@@ -117,7 +117,7 @@ def generate_prompt(image: Image.Image, caption_detail: str = "<CAPTION>") -> st
     try:
         message_manager.add_message(f"Starting Florence-2 caption generation with detail level: {caption_detail}")
         device = torch.device(devicetorch.get(torch))
-        torch_dtype = devicetorch.dtype(torch)
+        torch_dtype = devicetorch.dtype(torch, "bfloat16")
         
         gc.collect()
         devicetorch.empty_cache(torch)
