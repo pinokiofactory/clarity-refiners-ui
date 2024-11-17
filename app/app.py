@@ -8,6 +8,8 @@ import subprocess
 import gc
 import psutil  # for system stats - gpu/cpu etc
 import random
+import shutil
+from typing import List
 
 from PIL import Image
 from pathlib import Path
@@ -34,8 +36,11 @@ pillow_heif.register_heif_opener()
 pillow_heif.register_avif_opener()
 
 message_manager = MessageManager()
+
 last_seed = None
 save_path = "../outputs"   # Can be changed to a preferred directory: "C:\path\to\save_folder"
+MAX_GALLERY_IMAGES = 30
+VALID_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif', '.avif'}
 
 
 CHECKPOINTS = ESRGANUpscalerCheckpoints(
@@ -102,7 +107,7 @@ CHECKPOINTS = ESRGANUpscalerCheckpoints(
 )
 
 device = torch.device(devicetorch.get(torch))
-dtype = devicetorch.dtype(torch) 
+dtype = devicetorch.dtype(torch, "bfloat16")
 enhancer = ESRGANUpscaler(checkpoints=CHECKPOINTS, device=device, dtype=dtype)
 
 
@@ -117,7 +122,7 @@ def generate_prompt(image: Image.Image, caption_detail: str = "<CAPTION>") -> st
     try:
         message_manager.add_message(f"Starting Florence-2 caption generation with detail level: {caption_detail}")
         device = torch.device(devicetorch.get(torch))
-        torch_dtype = devicetorch.dtype(torch)
+        torch_dtype = devicetorch.dtype(torch, "bfloat16")
         
         gc.collect()
         devicetorch.empty_cache(torch)
@@ -249,6 +254,22 @@ def clean_caption(text: str) -> str:
     
     return cleaned_text.strip()
 
+
+def get_seed(seed_value: int, reuse: bool) -> int:
+    """Handle seed generation and reuse logic."""
+    global last_seed
+    
+    if reuse and last_seed is not None:
+        return last_seed
+    
+    if seed_value == -1:
+        generated_seed = random.randint(0, 10_000)
+        last_seed = generated_seed
+        return generated_seed
+    
+    last_seed = seed_value
+    return seed_value
+
     
 def process(
     input_image: Image.Image,
@@ -322,8 +343,139 @@ def process(
         gc.collect()
         devicetorch.empty_cache(torch)
         return gr.Warning(f"Error during processing: {str(e)}")
-        
 
+        
+def batch_process_images(
+    files,
+    prompt: str = "masterpiece, best quality, highres",
+    negative_prompt: str = "worst quality, low quality, normal quality",
+    seed: int = -1,
+    reuse_seed: bool = False,
+    upscale_factor: int = 2,
+    controlnet_scale: float = 0.6,
+    controlnet_decay: float = 1.0,
+    condition_scale: int = 6,
+    tile_width: int = 112,
+    tile_height: int = 144,
+    denoise_strength: float = 0.35,
+    num_inference_steps: int = 18,
+    solver: str = "DDIM",
+    progress=gr.Progress()
+) -> tuple[str, List[str]]:  # Make sure we're returning both status and gallery data
+    """
+    Process multiple images with the enhancer and save directly to batch subfolder.
+    """
+    if not files:
+        message_manager.add_warning("No files selected for batch processing")
+        return "Please upload some images to process."
+        
+    results = {
+        'successful': 0,
+        'failed': 0,
+        'skipped': 0,
+        'processed_files': [],
+        'error_files': []
+    }
+    
+    # Valid image extensions (case-insensitive)
+    valid_extensions = {'.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif', '.avif'}
+    
+    # Create batch subfolder with timestamp
+    timestamp = datetime.now().strftime('%y%m%d_%H%M%S')
+    batch_folder = os.path.join(save_path, f"batch_{timestamp}")
+    os.makedirs(batch_folder, exist_ok=True)
+    message_manager.add_message(f"Created batch folder: {batch_folder}")
+    
+    try:
+        total_files = len(files)
+        message_manager.add_message(f"Starting batch processing of {total_files} files")
+        
+        for i, file in enumerate(files, 1):
+            try:
+                # Update progress
+                progress(i/total_files, f"Processing {i}/{total_files}")
+                message_manager.add_message(f"Processing file {i}/{total_files}: {file.name}")
+                
+                # Check file extension
+                file_ext = os.path.splitext(file.name)[1].lower()
+                if file_ext not in valid_extensions:
+                    message_manager.add_warning(f"Skipping unsupported file: {file.name}")
+                    results['skipped'] += 1
+                    results['error_files'].append(f"{os.path.basename(file.name)} (Unsupported format)")
+                    continue
+                
+                # Load and process image
+                input_image = Image.open(file.name).convert("RGB")
+                
+                # Clear memory before processing
+                gc.collect()
+                devicetorch.empty_cache(torch)
+                
+                # Process with the same parameters as single image processing
+                actual_seed = get_seed(seed, reuse_seed)
+                manual_seed(actual_seed)
+                solver_type: type[Solver] = getattr(solvers, solver)
+                
+                with torch.no_grad():
+                    enhanced_image = enhancer.upscale(
+                        image=input_image,
+                        prompt=prompt,
+                        negative_prompt=negative_prompt,
+                        upscale_factor=upscale_factor,
+                        controlnet_scale=controlnet_scale,
+                        controlnet_scale_decay=controlnet_decay,
+                        condition_scale=condition_scale,
+                        tile_size=(tile_height, tile_width),
+                        denoise_strength=denoise_strength,
+                        num_inference_steps=num_inference_steps,
+                        loras_scale={"more_details": 0.5, "sdxl_render": 1.0},
+                        solver_type=solver_type,
+                    )
+                
+                # Save enhanced image to batch folder
+                original_name = Path(file.name).stem
+                enhanced_filename = f"{original_name}_enhanced.png"
+                output_path = os.path.join(batch_folder, enhanced_filename)
+                enhanced_image.save(output_path, "PNG")
+                
+                # Update results
+                results['successful'] += 1
+                results['processed_files'].append(enhanced_filename)
+                message_manager.add_success(f"Saved: {enhanced_filename}")
+                
+                # Cleanup
+                del enhanced_image
+                del input_image
+                gc.collect()
+                devicetorch.empty_cache(torch)
+                
+            except Exception as e:
+                message_manager.add_error(f"Error processing {file.name}: {str(e)}")
+                results['failed'] += 1
+                results['error_files'].append(f"{os.path.basename(file.name)} ({str(e)})")
+                
+        # Prepare result summary
+        summary = [
+            f"Processing complete!",
+            f"Successfully processed: {results['successful']} images",
+            f"Failed: {results['failed']} images",
+            f"Skipped: {results['skipped']} images",
+            f"\nSaved to folder: {batch_folder}"
+        ]
+        
+        if results['error_files']:
+            summary.append("\nErrors:")
+            summary.extend(results['error_files'])
+            
+        message_manager.add_success("Batch processing completed")
+        return "\n".join(summary), update_gallery()
+        
+    except Exception as e:
+        error_msg = f"Batch processing error: {str(e)}"
+        message_manager.add_error(error_msg)
+        return error_msg
+            
+            
 def open_output_folder() -> None:
     folder_path = os.path.abspath(save_path)
     
@@ -343,11 +495,12 @@ def open_output_folder() -> None:
         message_manager.add_error(f"Error opening folder: {str(e)}")
 
 
-def save_output(image: Image.Image = None, auto_saved: bool = False) -> None:  # Changed return type to None
+def save_output(image: Image.Image = None, auto_saved: bool = False) -> List[str]:
+    """Save image and return updated gallery data"""
     if image is None:
         if not globals().get('latest_result'):
             message_manager.add_warning("No image to save! Please enhance an image first.")
-            return
+            return []
         image = latest_result
         
     try:
@@ -364,31 +517,61 @@ def save_output(image: Image.Image = None, auto_saved: bool = False) -> None:  #
         
         save_type = "auto-saved" if auto_saved else "saved"
         message = f"Image {save_type} as: {filename}"
-        
-        # Add to message manager
         message_manager.add_success(message)
+        
+        # Return updated gallery data
+        return update_gallery()
         
     except Exception as e:
         error_msg = f"Error saving image: {str(e)}"
         message_manager.add_error(error_msg)
-
-
-def get_seed(seed_value: int, reuse: bool) -> int:
-    """Handle seed generation and reuse logic."""
-    global last_seed
-    
-    if reuse and last_seed is not None:
-        return last_seed
-    
-    if seed_value == -1:
-        generated_seed = random.randint(0, 10_000)
-        last_seed = generated_seed
-        return generated_seed
-    
-    last_seed = seed_value
-    return seed_value
+        return []
         
         
+def process_and_update(*args):
+    """Wrapper to handle both process output and gallery update"""
+    result = process(*args)  # This gives us the slider images
+    return result, update_gallery()  # Get current gallery state
+    
+    
+def update_gallery() -> List[str]:
+    """Update gallery with most recent images from save path and batch folders."""
+    try:
+        # Get all images from main save path and batch subfolders
+        batch_folders = [d for d in os.listdir(save_path) 
+                        if os.path.isdir(os.path.join(save_path, d)) 
+                        and d.startswith('batch_')]
+        
+        # Collect images from main folder and all batch folders
+        all_images = []
+        
+        # Main folder images
+        main_images = [
+            os.path.join(save_path, f) 
+            for f in os.listdir(save_path) 
+            if f.lower().endswith(tuple(VALID_EXTENSIONS))
+        ]
+        all_images.extend(main_images)
+        
+        # Batch folder images
+        for batch_folder in batch_folders:
+            folder_path = os.path.join(save_path, batch_folder)
+            batch_images = [
+                os.path.join(folder_path, f)
+                for f in os.listdir(folder_path)
+                if f.lower().endswith(tuple(VALID_EXTENSIONS))
+            ]
+            all_images.extend(batch_images)
+        
+        # Sort by newest first and limit
+        all_images.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+        return all_images[:MAX_GALLERY_IMAGES]
+        
+    except Exception as e:
+        message_manager.add_error(f"Gallery update error: {str(e)}")
+        return []
+
+
 css = """
 
 /* Specific adjustments for Image */
@@ -442,9 +625,23 @@ latest_result = None
 with gr.Blocks(css=css) as demo:
     with gr.Row():
         with gr.Column(elem_classes="image-container"):
-            input_image = gr.Image(type="pil", label="Input Image", elem_classes=["image-custom"])
+            with gr.Tabs():
+                with gr.TabItem("Single Image"):
+                    input_image = gr.Image(type="pil", label="Input Image", elem_classes=["image-custom"])
+                with gr.TabItem("Batch Process"):
+                    input_files = gr.File(
+                        file_count="multiple",
+                        label="Load Images",
+                        scale=2
+                    )
+                    batch_status = gr.Textbox(
+                        label="Batch Processing Status",
+                        interactive=False,
+                        show_copy_button=True
+                    )
             with gr.Row():
                 run_button = gr.ClearButton(components=None, value="Enhance Image", variant="primary")
+                batch_button = gr.Button("Process Batch", variant="primary")
            
         with gr.Column(elem_classes="image-container"):
             output_slider = ImageSlider(
@@ -500,16 +697,17 @@ with gr.Blocks(css=css) as demo:
                 label="Upscale Factor",
             )
             denoise_strength = gr.Slider(
-                minimum=0,
+                minimum=0.05,
                 maximum=1,
-                value=0.25,
+                value=0.15,
                 step=0.05,
-                label="Denoise Strength",
+                label="Denoise Strength", 
+                info="set to min for more traditional upscale",
             )
             num_inference_steps = gr.Slider(
                 minimum=1,
                 maximum=50,
-                value=18,
+                value=20,
                 step=1,
                 label="Number of Inference Steps",
             )
@@ -556,25 +754,40 @@ with gr.Blocks(css=css) as demo:
                 value="DDIM",
                 label="Solver",
             )
+    with gr.Accordion("System Info & Console", open=True):            
+        with gr.Row():       
+            # Status Info (for cpu/gpu monitor)
+            resource_monitor = gr.Textbox(
+                label="Monitor",
+                lines=8,
+                interactive=False,
+                # value=get_welcome_message()
+            )  
+            console_out = gr.Textbox(
+                label="Console",
+                lines=8,
+                interactive=False,
+                show_copy_button=True,
+                autoscroll=True,    # Enables automatic scrolling to newest messages
+                elem_classes="console-scroll"  # Add custom class for styling
+            )
+ 
+    with gr.Accordion("Gallery", open=False):     
+        with gr.Row():
+            gallery = gr.Gallery(
+                label="Recent Enhancements",
+                show_label=True,
+                elem_id="gallery",
+                columns=5,
+                rows=6,
+                height="80vh",  # Use viewport height instead of fixed pixels
+                object_fit="contain",
+                allow_preview=True,
+                show_share_button=False,
+                show_download_button=True,
+                preview=True,
+            )
             
-    with gr.Row():       
-        # Status Info (for cpu/gpu monitor)
-        resource_monitor = gr.Textbox(
-            label="Monitor",
-            lines=8,
-            interactive=False,
-            # value=get_welcome_message()
-        )  
-        console_out = gr.Textbox(
-            label="Console",
-            lines=8,
-            interactive=False,
-            show_copy_button=True,
-            autoscroll=True,    # Enables automatic scrolling to newest messages
-            elem_classes="console-scroll"  # Add custom class for styling
-        )
-        
-        
     # Event handlers
     
     generate_prompt_btn.click(
@@ -584,13 +797,13 @@ with gr.Blocks(css=css) as demo:
     )
     
     run_button.click(
-        fn=process,
+        fn=process_and_update,
         inputs=[
             input_image,
             prompt,
             negative_prompt,
             seed,
-            reuse_seed, 
+            reuse_seed,
             upscale_factor,
             controlnet_scale,
             controlnet_decay,
@@ -600,15 +813,36 @@ with gr.Blocks(css=css) as demo:
             denoise_strength,
             num_inference_steps,
             solver,
-            auto_save, 
+            auto_save,
         ],
-        outputs=output_slider,
+        outputs=[output_slider, gallery]
+    )
+    
+    batch_button.click(
+        fn=batch_process_images,
+        inputs=[
+            input_files,
+            prompt,
+            negative_prompt,
+            seed,
+            reuse_seed,
+            upscale_factor,
+            controlnet_scale,
+            controlnet_decay,
+            condition_scale,
+            tile_width,
+            tile_height,
+            denoise_strength,
+            num_inference_steps,
+            solver,
+        ],
+        outputs=[batch_status, gallery]
     )
     
     save_result.click(
         fn=save_output,
         inputs=None,
-        outputs=gr.Text(visible=False)
+        outputs=[gallery]
     )
     
     open_folder_button.click(
@@ -627,5 +861,10 @@ with gr.Blocks(css=css) as demo:
         every=1  # Updates every 1 second
     )
     
-    
+    # Add one-time gallery initialization on startup
+    demo.load(
+        fn=update_gallery,
+        outputs=gallery
+    )
+
 demo.launch(share=False)
