@@ -5,8 +5,10 @@ An enhanced Pinokio port of:  [finegrain-image-enhancer](https://huggingface.co/
 Which was adapted from philz1337x's:  [Clarity-Upscaler](https://github.com/philz1337x/clarity-upscaler)
 
 ## Pinokio UI:
-<img src="screenshots/FIE-A.png" width="45%" alt="Image Enhancer Interface">
-<img src="screenshots/FIE-B.png" width="45%" alt="Batch Process Interface">
+<p float="left">
+  <img src="screenshots/FIE-A.png" width="49%" alt="Image Enhancer Interface">
+  <img src="screenshots/FIE-B.png" width="49%" alt="Batch Process Interface">
+</p>
 
 
 ## Features
