@@ -6,8 +6,8 @@ Which was adapted from philz1337x's:  [Clarity-Upscaler](https://github.com/phil
 
 ## Pinokio UI:
 <p float="left">
-  <img src="screenshots/FIE-A.png" width="49%" alt="Image Enhancer Interface">
-  <img src="screenshots/FIE-B.png" width="49%" alt="Batch Process Interface">
+  <img src="screenshots/FIE-A.png" width="49%" alt="Image Enhancer Interface" style="vertical-align: top">
+  <img src="screenshots/FIE-B.png" width="49%" alt="Batch Process Interface" style="vertical-align: top">
 </p>
 
 
@@ -18,6 +18,7 @@ Which was adapted from philz1337x's:  [Clarity-Upscaler](https://github.com/phil
   - Fine-grained control over enhancement parameters
   - Seed management for reproducible results
 - Integrated Florence-2 for easy prompt crafting
+- Batch Image Processing
 - GPU/CPU usage tracking and detailed console output for process transparency
 - Pinokio friendly save functions:
   - Autosave option
