@@ -487,7 +487,7 @@ def open_output_folder() -> None:
         
     try:
         if os.name == 'nt':  # Windows
-            os.startfile(folder_path)
+            subprocess.run(['explorer', folder_path])
         elif os.name == 'posix':  # macOS and Linux
             subprocess.run(['xdg-open' if os.name == 'posix' else 'open', folder_path])
         message_manager.add_success(f"Opened outputs folder: {folder_path}")
