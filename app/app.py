@@ -361,13 +361,13 @@ def batch_process_images(
     num_inference_steps: int = 18,
     solver: str = "DDIM",
     progress=gr.Progress()
-) -> tuple[str, List[str]]:  # Make sure we're returning both status and gallery data
+) -> tuple[str, List[str], tuple[Image.Image, Image.Image]]:
     """
     Process multiple images with the enhancer and save directly to batch subfolder.
     """
     if not files:
         message_manager.add_warning("No files selected for batch processing")
-        return "Please upload some images to process."
+        return "Please upload some images to process.", [], (None, None)
         
     results = {
         'successful': 0,
@@ -377,14 +377,14 @@ def batch_process_images(
         'error_files': []
     }
     
-    # Valid image extensions (case-insensitive)
     valid_extensions = {'.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif', '.avif'}
     
-    # Create batch subfolder with timestamp
     timestamp = datetime.now().strftime('%y%m%d_%H%M%S')
     batch_folder = os.path.join(save_path, f"batch_{timestamp}")
     os.makedirs(batch_folder, exist_ok=True)
     message_manager.add_message(f"Created batch folder: {batch_folder}")
+    
+    current_image_pair = (None, None)
     
     try:
         total_files = len(files)
@@ -432,6 +432,9 @@ def batch_process_images(
                         solver_type=solver_type,
                     )
                 
+                # Update the current image pair for the slider
+                current_image_pair = (input_image, enhanced_image)
+                
                 # Save enhanced image to batch folder
                 original_name = Path(file.name).stem
                 enhanced_filename = f"{original_name}_enhanced.png"
@@ -443,9 +446,32 @@ def batch_process_images(
                 results['processed_files'].append(enhanced_filename)
                 message_manager.add_success(f"Saved: {enhanced_filename}")
                 
+                # For the last file, show the summary instead of progress
+                if i == total_files:
+                    # Prepare final summary
+                    summary = [
+                        f"Processing complete!",
+                        f"Successfully processed: {results['successful']} images",
+                        f"Failed: {results['failed']} images",
+                        f"Skipped: {results['skipped']} images",
+                        f"\nSaved to folder: {batch_folder}"
+                    ]
+                    
+                    if results['error_files']:
+                        summary.append("\nErrors:")
+                        summary.extend(results['error_files'])
+                        
+                    message_manager.add_success("Batch processing completed")
+                    yield "\n".join(summary), update_gallery(), current_image_pair
+                else:
+                    # Show progress for non-final files
+                    yield (
+                        f"Processing {i}/{total_files}: {file.name}",
+                        update_gallery(),
+                        current_image_pair
+                    )
+                
                 # Cleanup
-                del enhanced_image
-                del input_image
                 gc.collect()
                 devicetorch.empty_cache(torch)
                 
@@ -453,27 +479,14 @@ def batch_process_images(
                 message_manager.add_error(f"Error processing {file.name}: {str(e)}")
                 results['failed'] += 1
                 results['error_files'].append(f"{os.path.basename(file.name)} ({str(e)})")
-                
-        # Prepare result summary
-        summary = [
-            f"Processing complete!",
-            f"Successfully processed: {results['successful']} images",
-            f"Failed: {results['failed']} images",
-            f"Skipped: {results['skipped']} images",
-            f"\nSaved to folder: {batch_folder}"
-        ]
         
-        if results['error_files']:
-            summary.append("\nErrors:")
-            summary.extend(results['error_files'])
-            
-        message_manager.add_success("Batch processing completed")
-        return "\n".join(summary), update_gallery()
+        # Final return is still needed for gradio
+        return "\n".join(summary), update_gallery(), current_image_pair
         
     except Exception as e:
         error_msg = f"Batch processing error: {str(e)}"
         message_manager.add_error(error_msg)
-        return error_msg
+        return error_msg, [], (None, None)
             
             
 def open_output_folder() -> None:
@@ -487,7 +500,7 @@ def open_output_folder() -> None:
         
     try:
         if os.name == 'nt':  # Windows
-            os.startfile(folder_path)
+            subprocess.run(['explorer', folder_path])
         elif os.name == 'posix':  # macOS and Linux
             subprocess.run(['xdg-open' if os.name == 'posix' else 'open', folder_path])
         message_manager.add_success(f"Opened outputs folder: {folder_path}")
@@ -617,6 +630,17 @@ css = """
     overflow-y: auto !important;  /* Enables vertical scrolling */
 }
 
+/* Status specific styling */
+.batch-status textarea {
+    min-height: 12em !important;  /* Ensures minimum height for welcome message */
+}
+
+.prompt-guide textarea {
+    white-space: pre-wrap !important;  /* Preserves formatting but allows wrapping */
+    padding-left: 1em !important;      /* Base padding for all text */
+    text-indent: -1em !important;      /* Negative indent for first line */
+}
+
 """
 
 # Store the latest processing result
@@ -625,10 +649,27 @@ latest_result = None
 with gr.Blocks(css=css) as demo:
     with gr.Row():
         with gr.Column(elem_classes="image-container"):
-            with gr.Tabs():
-                with gr.TabItem("Single Image"):
+            with gr.Tabs() as tabs:
+                with gr.TabItem("Single Image") as single_tab:
                     input_image = gr.Image(type="pil", label="Input Image", elem_classes=["image-custom"])
-                with gr.TabItem("Batch Process"):
+                    run_button = gr.ClearButton(
+                        components=None,
+                        value="Enhance Image",
+                        variant="primary"
+                    )
+                with gr.TabItem("Batch Process") as batch_tab:
+                    batch_welcome = """✨ Welcome to Batch Processing! ✨
+
+📸 Drop multiple images to enhance them sequentially:
+    
+• All enhancement settings will be applied to every image
+   (prompts, denoise, seed, etc. - note: seed defaults to random)
+• Images will be saved to a timestamped batch folder
+• Enhancements appear in the before/after window
+• Track progress here + additional details in main console
+
+🚀 Ready? Drop your images above and click 'Process Batch'!"""
+
                     input_files = gr.File(
                         file_count="multiple",
                         label="Load Images",
@@ -636,12 +677,16 @@ with gr.Blocks(css=css) as demo:
                     )
                     batch_status = gr.Textbox(
                         label="Batch Processing Status",
+                        value=batch_welcome,
                         interactive=False,
-                        show_copy_button=True
+                        show_copy_button=True,
+                        autoscroll=True,
+                        elem_classes="batch-status"
                     )
-            with gr.Row():
-                run_button = gr.ClearButton(components=None, value="Enhance Image", variant="primary")
-                batch_button = gr.Button("Process Batch", variant="primary")
+                    batch_button = gr.Button(
+                        "Process Batch",
+                        variant="primary"
+                    )
            
         with gr.Column(elem_classes="image-container"):
             output_slider = ImageSlider(
@@ -657,11 +702,39 @@ with gr.Blocks(css=css) as demo:
 
     with gr.Accordion("Prompting", open=False):
         with gr.Row():
-            prompt = gr.Textbox(
-                label="Prompt",
-                placeholder="masterpiece, best quality, highres",
-                show_label=True
-            )
+            with gr.Tabs():
+                with gr.TabItem("Prompt"):
+                    prompt = gr.Textbox(
+                        label="Enhancement Prompt",
+                        placeholder="masterpiece, best quality, highres",
+                        show_label=True
+                    )
+                with gr.TabItem("Guide"):
+                    prompt_guide = gr.Textbox(
+    value="""💡 Prompt Guide
+
+🎯 Additional Prompts are optional! 
+• They'll work similar to img2img+controlnet in other gen AI apps
+• The default settings work great for general enhancement
+• Use prompting to guide the AI towards specific improvements
+• Keep prompts simple and focused on what you want enhanced
+
+📝 Example prompts:
+• "sharp details, high quality" - for clarity and definition
+• "vivid colors, high contrast" - for more vibrant results
+• "soft lighting, smooth details" - for a gentler enhancement
+• "perfect eyes", "green eyes", detailed fingernails" etc - focus on specific details
+
+💭 Tips:
+• Start with no prompt for a test enhancement, then add specific guidance if needed.
+• Florence2 auto-prompting is entirely optional. Mostly added because why not 😆""", 
+
+                        label="Using Prompts",
+                        interactive=False,
+                        show_label=False,
+                        lines=12,
+                        elem_classes="prompt-guide"
+                    )
             with gr.Column(scale=1):
                 caption_detail = gr.Radio(
                     choices=["<CAPTION>","<DETAILED_CAPTION>", "<MORE_DETAILED_CAPTION>"],
@@ -836,7 +909,7 @@ with gr.Blocks(css=css) as demo:
             num_inference_steps,
             solver,
         ],
-        outputs=[batch_status, gallery]
+        outputs=[batch_status, gallery, output_slider]
     )
     
     save_result.click(
