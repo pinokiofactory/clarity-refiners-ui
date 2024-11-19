@@ -365,6 +365,22 @@ def batch_process_images(
     """
     Process multiple images with the enhancer and save directly to batch subfolder.
     """
+    def generate_summary():
+        """Helper to generate batch processing summary"""
+        summary = [
+            f"Processing complete!",
+            f"Successfully processed: {results['successful']} images",
+            f"Failed: {results['failed']} images",
+            f"Skipped: {results['skipped']} images",
+            f"\nSaved to folder: {batch_folder}"
+        ]
+        
+        if results['error_files']:
+            summary.append("\nErrors:")
+            summary.extend(results['error_files'])
+            
+        return "\n".join(summary)
+
     if not files:
         message_manager.add_warning("No files selected for batch processing")
         return "Please upload some images to process.", [], (None, None)
@@ -402,6 +418,16 @@ def batch_process_images(
                     message_manager.add_warning(f"Skipping unsupported file: {file.name}")
                     results['skipped'] += 1
                     results['error_files'].append(f"{os.path.basename(file.name)} (Unsupported format)")
+                    
+                    if i == total_files:
+                        message_manager.add_success("Batch processing completed")
+                        yield generate_summary(), update_gallery(), current_image_pair
+                    else:
+                        yield (
+                            f"Processing {i}/{total_files}: {file.name}",
+                            update_gallery(),
+                            current_image_pair
+                        )
                     continue
                 
                 # Load and process image
@@ -448,23 +474,9 @@ def batch_process_images(
                 
                 # For the last file, show the summary instead of progress
                 if i == total_files:
-                    # Prepare final summary
-                    summary = [
-                        f"Processing complete!",
-                        f"Successfully processed: {results['successful']} images",
-                        f"Failed: {results['failed']} images",
-                        f"Skipped: {results['skipped']} images",
-                        f"\nSaved to folder: {batch_folder}"
-                    ]
-                    
-                    if results['error_files']:
-                        summary.append("\nErrors:")
-                        summary.extend(results['error_files'])
-                        
                     message_manager.add_success("Batch processing completed")
-                    yield "\n".join(summary), update_gallery(), current_image_pair
+                    yield generate_summary(), update_gallery(), current_image_pair
                 else:
-                    # Show progress for non-final files
                     yield (
                         f"Processing {i}/{total_files}: {file.name}",
                         update_gallery(),
@@ -479,9 +491,13 @@ def batch_process_images(
                 message_manager.add_error(f"Error processing {file.name}: {str(e)}")
                 results['failed'] += 1
                 results['error_files'].append(f"{os.path.basename(file.name)} ({str(e)})")
+                
+                if i == total_files:
+                    message_manager.add_success("Batch processing completed")
+                    yield generate_summary(), update_gallery(), current_image_pair
         
-        # Final return is still needed for gradio
-        return "\n".join(summary), update_gallery(), current_image_pair
+        # Final return for gradio
+        return generate_summary(), update_gallery(), current_image_pair
         
     except Exception as e:
         error_msg = f"Batch processing error: {str(e)}"
