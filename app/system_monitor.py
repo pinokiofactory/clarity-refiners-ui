@@ -41,35 +41,29 @@ class SystemMonitor:
 
     @staticmethod
     def get_mac_gpu_info() -> Tuple[str, MetricsDict]:
-        """Get Apple Silicon GPU information."""
+        """Get Apple Silicon GPU information without requiring sudo."""
         metrics = {}
         try:
-            # Get GPU memory info using powermetrics
-            result = subprocess.check_output(
-                ['powermetrics', '-n', '1', '--samplers', 'gpu_power'],
-                encoding='utf-8'
-            )
+            # Skip powermetrics completely as it requires sudo
+            # Instead use basic memory reporting
+            memory = psutil.virtual_memory()
             
-            if 'GPU Active Residency' in result:
-                for line in result.split('\n'):
-                    if 'GPU Active Residency' in line:
-                        util = float(line.split(':')[1].strip().replace('%', ''))
-                        metrics['utilization'] = util
-            
-            # Get basic system info for memory approximation
-            memory_cmd = subprocess.check_output(['ps', '-caxm', '-orss,comm'], encoding='utf-8')
-            metrics['memory_total'] = 8.0  # Typical unified memory allocation
-            metrics['memory_used'] = sum(int(line.split()[0]) for line in memory_cmd.split('\n')[1:] 
-                                       if line and 'GPU' in line) / 1024 / 1024
-            
-        except (subprocess.SubprocessError, FileNotFoundError):
+            # On Apple Silicon, GPU shares system memory
+            # We'll report unified memory stats
             metrics = {
-                'memory_total': 8.0,
+                'memory_total': memory.total / (1024**3),  # Convert to GB
+                'memory_used': memory.used / (1024**3),
+                'utilization': psutil.cpu_percent()  # Use CPU usage as a proxy
+            }
+            
+        except Exception:
+            metrics = {
+                'memory_total': 0.0,
                 'memory_used': 0.0,
                 'utilization': 0.0
             }
         
-        return "Apple Silicon GPU", metrics
+        return "Apple Silicon Unified GPU", metrics
 
     @staticmethod
     def get_amd_gpu_info() -> Tuple[str, MetricsDict]:

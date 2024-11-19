@@ -39,6 +39,7 @@ message_manager = MessageManager()
 
 last_seed = None
 save_path = "../outputs"   # Can be changed to a preferred directory: "C:\path\to\save_folder"
+os.makedirs(save_path, exist_ok=True)
 MAX_GALLERY_IMAGES = 30
 VALID_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif', '.avif'}
 
@@ -950,10 +951,4 @@ with gr.Blocks(css=css) as demo:
         every=1  # Updates every 1 second
     )
     
-    # Add one-time gallery initialization on startup
-    demo.load(
-        fn=update_gallery,
-        outputs=gallery
-    )
-
 demo.launch(share=False)
