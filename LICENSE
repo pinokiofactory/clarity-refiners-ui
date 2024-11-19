@@ -229,7 +229,8 @@ src/esrgan_model.py (x)
    See the License for the specific language governing permissions and
    limitations under the License.
 
-(x) Modified from https://github.com/philz1337x/clarity-upscaler
+(x)	Modified from https://huggingface.co/spaces/finegrain/finegrain-image-enhancer
+	Modified from https://github.com/philz1337x/clarity-upscaler
     which is a copy of https://github.com/AUTOMATIC1111/stable-diffusion-webui
     which is a copy of https://github.com/victorca25/iNNfer
     which is a copy of https://github.com/xinntao/ESRGAN
