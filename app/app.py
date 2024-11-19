@@ -9,9 +9,9 @@ import gc
 import psutil  # for system stats - gpu/cpu etc
 import random
 import shutil
-from typing import List
 
 from PIL import Image
+from typing import List
 from pathlib import Path
 from datetime import datetime
 from gradio_imageslider import ImageSlider
@@ -273,8 +273,8 @@ def get_seed(seed_value: int, reuse: bool) -> int:
     
 def process(
     input_image: Image.Image,
-    prompt: str = "masterpiece, best quality, highres",
-    negative_prompt: str = "worst quality, low quality, normal quality",
+    prompt: str = "",
+    negative_prompt: str = "",
     seed: int = -1,
     reuse_seed: bool = False,
     upscale_factor: int = 2,
@@ -347,8 +347,8 @@ def process(
         
 def batch_process_images(
     files,
-    prompt: str = "masterpiece, best quality, highres",
-    negative_prompt: str = "worst quality, low quality, normal quality",
+    prompt: str = "",
+    negative_prompt: str = "",
     seed: int = -1,
     reuse_seed: bool = False,
     upscale_factor: int = 2,
@@ -722,7 +722,7 @@ with gr.Blocks(css=css) as demo:
                 with gr.TabItem("Prompt"):
                     prompt = gr.Textbox(
                         label="Enhancement Prompt",
-                        placeholder="masterpiece, best quality, highres",
+                        value="masterpiece, best quality, highres",
                         show_label=True
                     )
                 with gr.TabItem("Guide"):
@@ -762,7 +762,7 @@ with gr.Blocks(css=css) as demo:
         with gr.Row():
             negative_prompt = gr.Textbox(
                 label="Negative Prompt",
-                placeholder="worst quality, low quality, normal quality",
+                value="worst quality, low quality, normal quality",
             )
         with gr.Row():
             with gr.Column(scale=8):
