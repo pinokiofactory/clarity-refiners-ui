@@ -730,7 +730,7 @@ with gr.Blocks(css=css) as demo:
     value="""💡 Prompt Guide
 
 🎯 Additional Prompts are optional! 
-• They'll work similar to img2img+controlnet in other gen AI apps
+• They'll work similarly to prompts added to img2img with controlnets in other gen AI apps
 • The default settings work great for general enhancement
 • Use prompting to guide the AI towards specific improvements
 • Keep prompts simple and focused on what you want enhanced
@@ -742,7 +742,7 @@ with gr.Blocks(css=css) as demo:
 • "perfect eyes", "green eyes", detailed fingernails" etc - focus on specific details
 
 💭 Tips:
-• Start with no prompt for a test enhancement, then add specific guidance if needed.
+• Start with the default prompt, then add specific guidance if needed.
 • Florence2 auto-prompting is entirely optional. Mostly added because why not 😆""", 
 
                         label="Using Prompts",
