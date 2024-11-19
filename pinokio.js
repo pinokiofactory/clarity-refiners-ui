@@ -1,8 +1,8 @@
 const path = require('path')
 module.exports = {
   version: "2.0",
-  title: "Finegrain-Image-Enhancer",
-  description: "An enhanced local port of finegrain-image-enhancer (https://huggingface.co/spaces/finegrain/finegrain-image-enhancer), which was adapted from philz1337x's Clarity Upscaler (https://github.com/philz1337x/clarity-upscaler)",
+  title: "Clarity Refiners UI",
+  description: "An enhanced local port of finegrain-image-enhancer powered by Refiners (https://huggingface.co/spaces/finegrain/finegrain-image-enhancer), which was adapted from philz1337x's Clarity Upscaler (https://github.com/philz1337x/clarity-upscaler)",
   icon: "icon.png",
   menu: async (kernel, info) => {
     let installed = info.exists("app/env")
