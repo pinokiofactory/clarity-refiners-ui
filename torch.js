@@ -45,7 +45,7 @@ module.exports = {
     },
     // apple mac
     {
-      "when": "{{platform === 'darwin'}}",
+      "when": "{{platform === 'darwin' && arch === 'arm64'}}",
       "method": "shell.run",
       "params": {
         "venv": "{{args && args.venv ? args.venv : null}}",
