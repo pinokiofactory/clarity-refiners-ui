@@ -17,7 +17,8 @@ module.exports = {
         path: "app",
         message: [
           "pip install gradio devicetorch",
-          "pip install -r requirements.txt"
+          "pip install -r requirements.txt",
+          "pip install \"pydantic>=2.0,<2.11.0\"",
         ]
       }
     },
