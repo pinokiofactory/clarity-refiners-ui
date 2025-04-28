@@ -16,17 +16,11 @@ module.exports = {
         venv: "env",
         path: "app",
         message: [
-          "pip install gradio devicetorch",
-          "pip install -r requirements.txt",
-          "pip install \"pydantic>=2.0,<2.11.0\"",
+          "uv pip install gradio devicetorch",
+          "uv pip install -r requirements.txt",
+          "uv pip install \"pydantic>=2.0,<2.11.0\""
         ]
       }
-    },
-//    {
-//      method: "fs.link",
-//      params: {
-//        venv: "app/env"
-//      }
-//    }
+    }
   ]
 }
