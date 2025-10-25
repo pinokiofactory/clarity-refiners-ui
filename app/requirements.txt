@@ -6,7 +6,7 @@ pillow-heif>=0.18.0
 gradio==4.44.0
 devicetorch
 # for Florence-2
-transformers
+transformers==4.49.0
 ftfy
 regex
 tqdm 
