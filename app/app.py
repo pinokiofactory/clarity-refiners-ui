@@ -613,6 +613,13 @@ css = """
     width: auto !important;
     height: auto !important;
 }
+.image-custom img {
+    max-width: 100% !important;
+    max-height: 80vh !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain !important;
+}
 
 /* Center the ImageSlider container and maintain full width for slider */
 .image-container .image-slider-custom {
@@ -708,16 +715,18 @@ with gr.Blocks(css=css) as demo:
                     )
            
         with gr.Column(elem_classes="image-container"):
-            output_slider = ImageSlider(
-                interactive=False,
-                label="Before / After",
-                elem_classes=["image-slider-custom"]
-            )
-            run_button.add(output_slider)
-            with gr.Row():
-                save_result = gr.Button("Save Result", scale=2)
-                auto_save = gr.Checkbox(label="Auto-save", value=True)
-                open_folder_button = gr.Button("Open Outputs Folder", scale=2)
+            with gr.Tabs():
+                 with gr.TabItem("Result"):
+                    output_slider = ImageSlider(
+                        interactive=False,
+                        label="Before / After",
+                        elem_classes=["image-slider-custom"]
+                    )
+                    run_button.add(output_slider)
+                    with gr.Row():
+                        save_result = gr.Button("Save Result", scale=2)
+                        auto_save = gr.Checkbox(label="Auto-save", value=True)
+                        open_folder_button = gr.Button("Open Outputs Folder", scale=2)
 
     with gr.Accordion("Prompting", open=False):
         with gr.Row():
@@ -945,12 +954,12 @@ with gr.Blocks(css=css) as demo:
     
     def update_console():
         return message_manager.get_messages()
-    
-    # Initialize the timer and set up its tick event
-    demo.load(
+        
+    update_timer = gr.Timer(1, active=True)   
+    # Set up the tick event
+    update_timer.tick(
         fn=lambda: (SystemMonitor.get_system_info(), update_console()),
-        outputs=[resource_monitor, console_out],
-        every=1  # Updates every 1 second
+        outputs=[resource_monitor, console_out]
     )
     
 demo.launch(share=False)
