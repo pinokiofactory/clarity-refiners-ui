@@ -677,7 +677,7 @@ with gr.Blocks(css=css) as demo:
         with gr.Column(elem_classes="image-container"):
             with gr.Tabs() as tabs:
                 with gr.TabItem("Single Image") as single_tab:
-                    input_image = gr.Image(type="pil", label="Input Image", elem_classes=["image-custom"])
+                    input_image = gr.Image(type="pil", label="Input Image")
                     run_button = gr.ClearButton(
                         components=None,
                         value="Enhance Image",
